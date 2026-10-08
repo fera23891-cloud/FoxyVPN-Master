@@ -191,10 +191,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(windows)]
                     {
                         let _ = std::process::Command::new("reg")
-                            .args(["add", "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "1", "/f"])
+                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "1", "/f"])
                             .output();
                         let _ = std::process::Command::new("reg")
-                            .args(["add", "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings", "/v", "ProxyServer", "/t", "REG_SZ", "/d", "127.0.0.1:21080", "/f"])
+                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyServer", "/t", "REG_SZ", "/d", "127.0.0.1:21080", "/f"])
                             .output();
                     }
                     let resp = "HTTP/1.1 200 OK
@@ -208,7 +208,7 @@ Content-Length: 15
                     #[cfg(windows)]
                     {
                         let _ = std::process::Command::new("reg")
-                            .args(["add", "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "0", "/f"])
+                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "0", "/f"])
                             .output();
                     }
                     let resp = "HTTP/1.1 200 OK
