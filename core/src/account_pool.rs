@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ pub struct AccountCredentials {
 #[derive(Clone)]
 pub struct AccountPool {
     accounts: Arc<RwLock<Vec<AccountCredentials>>>,
-    current_index: Arc<AtomicUsize>,
+    _current_index: Arc<AtomicUsize>,
     sticky_domain_map: Arc<RwLock<HashMap<String, usize>>>,
 }
 
@@ -25,7 +25,7 @@ impl AccountPool {
     pub fn new() -> Self {
         Self {
             accounts: Arc::new(RwLock::new(Vec::new())),
-            current_index: Arc::new(AtomicUsize::new(0)),
+            _current_index: Arc::new(AtomicUsize::new(0)),
             sticky_domain_map: Arc::new(RwLock::new(HashMap::new())),
         }
     }
