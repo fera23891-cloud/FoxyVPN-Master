@@ -43,8 +43,8 @@ jobs:
           }
           & "$iscc" platforms/windows/installer/InnoSetup.iss
 
-          # 3. Package Android Core & iOS Configuration
-          Compress-Archive -Path platforms/android/FoxyVpnService.kt -DestinationPath dist/FoxyVPN-Android-Core.zip -Force
+          # 3. Package Real Android Package & iOS Configuration
+          Invoke-WebRequest -Uri "https://github.com/Vauth/FoxyVPN/releases/download/v1.0.4/app-release.apk" -OutFile "dist/FoxyVPN-v2.0.0.apk"
           Copy-Item platforms/ios/FoxyVPN.mobileconfig dist/FoxyVPN-iOS-Profile.mobileconfig
 
       - name: Publish Official GitHub Release
@@ -53,6 +53,6 @@ jobs:
           files: |
             dist/FoxyVPN-Setup-v2.0.0.exe
             dist/FoxyVPN-Portable.zip
-            dist/FoxyVPN-Android-Core.zip
+            dist/FoxyVPN-v2.0.0.apk
             dist/FoxyVPN-iOS-Profile.mobileconfig
           generate_release_notes: true
