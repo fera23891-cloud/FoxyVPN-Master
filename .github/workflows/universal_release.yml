@@ -1,0 +1,52 @@
+name: Universal Multi-Platform Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Standalone Rust Binaries
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          
+          # 1. Compile Clean Standalone Windows Portable
+          cargo build --release --bin foxyvpn-portable
+          Copy-Item target/release/foxyvpn-portable.exe dist/FoxyVPN-Portable.exe
+          Compress-Archive -Path dist/FoxyVPN-Portable.exe -DestinationPath dist/FoxyVPN-Portable.zip -Force
+
+          # 2. Compile Official Inno Setup Installer
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
+          & "$iscc" platforms/windows/installer/InnoSetup.iss
+
+          # 3. Package Android Core & iOS Configuration
+          Compress-Archive -Path platforms/android/FoxyVpnService.kt -DestinationPath dist/FoxyVPN-Android-Core.zip -Force
+          Copy-Item platforms/ios/FoxyVPN.mobileconfig dist/FoxyVPN-iOS-Profile.mobileconfig
+
+      - name: Publish Official GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/FoxyVPN-Setup-v2.0.0.exe
+            dist/FoxyVPN-Portable.zip
+            dist/FoxyVPN-Android-Core.zip
+            dist/FoxyVPN-iOS-Profile.mobileconfig
+          generate_release_notes: true

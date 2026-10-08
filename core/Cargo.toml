@@ -1,0 +1,23 @@
+[package]
+name = "foxyvpn-core"
+version = "2.0.0"
+edition = "2021"
+authors = ["FoxyVPN Master Team"]
+license = "MIT"
+
+[lib]
+name = "foxyvpn_core"
+path = "src/lib.rs"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+tokio = { version = "1.38", features = ["sync", "rt-multi-thread", "macros", "net", "io-util"] }
+bytes = "1.6"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+hmac = "0.12"
+pbkdf2 = "0.12"
+base64 = "0.22"
+parking_lot = "0.12"

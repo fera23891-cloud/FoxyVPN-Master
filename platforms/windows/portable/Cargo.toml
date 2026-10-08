@@ -1,0 +1,12 @@
+[package]
+name = "foxyvpn-portable"
+version = "2.0.0"
+edition = "2021"
+
+[[bin]]
+name = "foxyvpn-portable"
+path = "src/main.rs"
+
+[dependencies]
+foxyvpn-core = { path = "../../../core" }
+tokio = { version = "1.38", features = ["sync", "rt-multi-thread", "macros", "net", "io-util"] }
