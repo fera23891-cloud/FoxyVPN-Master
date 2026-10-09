@@ -1,7 +1,9 @@
+use foxyvpn_core::{DnsSinkhole, SplitTunnelEngine};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
 
@@ -159,6 +161,103 @@ const JSON_OK: &str = concat!(
     r#"{"status":"ok"}"#
 );
 
+async fn run_proxy_server(port: u16) {
+    let listener = match TcpListener::bind(format!("127.0.0.1:{}", port)).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("[Proxy] Failed to bind 127.0.0.1:{}: {}", port, e);
+            return;
+        }
+    };
+    println!("[Proxy] Core Proxy Engine active on 127.0.0.1:{}", port);
+
+    let sinkhole = Arc::new(DnsSinkhole::new());
+
+    loop {
+        let (mut client, _) = match listener.accept().await {
+            Ok(conn) => conn,
+            Err(_) => continue,
+        };
+
+        if !IS_CONNECTED.load(Ordering::SeqCst) {
+            continue;
+        }
+
+        let sinkhole = Arc::clone(&sinkhole);
+        tokio::spawn(async move {
+            let mut buf = [0u8; 4096];
+            let n = match client.read(&mut buf).await {
+                Ok(n) if n > 0 => n,
+                _ => return,
+            };
+
+            let req_str = String::from_utf8_lossy(&buf[..n]);
+            let first_line = req_str.lines().next().unwrap_or("");
+            let parts: Vec<&str> = first_line.split_whitespace().collect();
+
+            if parts.len() >= 2 && parts[0] == "CONNECT" {
+                let target = parts[1];
+                let host = target.split(':').next().unwrap_or(target);
+
+                if sinkhole.should_block(host) {
+                    let _ = client.write_all(b"HTTP/1.1 403 Forbidden
+Content-Length: 9
+
+Sinkholed").await;
+                    return;
+                }
+
+                let target_addr = if target.contains(':') {
+                    target.to_string()
+                } else {
+                    format!("{}:443", target)
+                };
+
+                let _is_bypassed = SplitTunnelEngine::should_bypass_vpn(host);
+
+                match TcpStream::connect(&target_addr).await {
+                    Ok(mut upstream) => {
+                        let _ = client.write_all(b"HTTP/1.1 200 Connection Established
+
+").await;
+                        let _ = tokio::io::copy_bidirectional(&mut client, &mut upstream).await;
+                    }
+                    Err(_) => {
+                        let _ = client.write_all(b"HTTP/1.1 502 Bad Gateway
+
+").await;
+                    }
+                }
+            } else if parts.len() >= 2 {
+                let url = parts[1];
+                let host = if let Some(stripped) = url.strip_prefix("http://") {
+                    stripped.split('/').next().unwrap_or("")
+                } else {
+                    ""
+                };
+                let host_name = host.split(':').next().unwrap_or(host);
+                if sinkhole.should_block(host_name) {
+                    let _ = client.write_all(b"HTTP/1.1 403 Forbidden
+
+").await;
+                    return;
+                }
+                let target_addr = if host.contains(':') {
+                    host.to_string()
+                } else {
+                    format!("{}:80", host)
+                };
+
+                if let Ok(mut upstream) = TcpStream::connect(&target_addr).await {
+                    if upstream.write_all(&buf[..n]).await.is_ok() {
+                        let _ = tokio::io::copy_bidirectional(&mut client, &mut upstream).await;
+                    }
+                }
+            }
+        });
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================================================");
@@ -169,6 +268,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proxy_port = 21080;
     println!("[Info] Local Proxy Listening: 127.0.0.1:{}", proxy_port);
     println!("[Info] GUI Dashboard Running: http://127.0.0.1:{}", gui_port);
+
+    tokio::spawn(async move {
+        run_proxy_server(proxy_port).await;
+    });
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_millis(600)).await;
