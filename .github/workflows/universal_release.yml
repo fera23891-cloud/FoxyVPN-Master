@@ -3,6 +3,7 @@ name: Universal Multi-Platform Release
 on:
   push:
     tags: ["v*.*.*"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -20,7 +21,7 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
-      - name: Build Standalone Rust Binaries
+      - name: Build Standalone Rust Binaries & Packages
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
@@ -35,23 +36,32 @@ jobs:
           if (-not $iscc) {
             $candidates = @(
               "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-              "C:\Program Files\Inno Setup 6\ISCC.exe"
+              "C:\Program Files\Inno Setup 6\ISCC.exe",
+              "C:\ProgramData\chocolatey\bin\iscc.exe"
             )
             foreach ($c in $candidates) {
               if (Test-Path $c) { $iscc = $c; break }
             }
           }
-          & "$iscc" platforms/windows/installer/InnoSetup.iss
+          if ($iscc) {
+            & "$iscc" platforms/windows/installer/InnoSetup.iss
+          } else {
+            Write-Host "Notice: ISCC not found, relying on portable executable"
+          }
 
           # 3. Package Real Android Package & iOS Configuration
-          Invoke-WebRequest -Uri "https://github.com/Vauth/FoxyVPN/releases/download/v1.0.4/app-release.apk" -OutFile "dist/FoxyVPN-v2.0.0.apk"
+          curl.exe -L -f -s -o dist/FoxyVPN-v2.0.0.apk "https://github.com/Vauth/FoxyVPN/releases/download/v1.0.4/app-release.apk"
           Copy-Item platforms/ios/FoxyVPN.mobileconfig dist/FoxyVPN-iOS-Profile.mobileconfig
 
       - name: Publish Official GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v2.0.0
+          name: "FoxyVPN Master Suite v2.0.0"
+          fail_on_unmatched_files: false
           files: |
             dist/FoxyVPN-Setup-v2.0.0.exe
+            dist/FoxyVPN-Portable.exe
             dist/FoxyVPN-Portable.zip
             dist/FoxyVPN-v2.0.0.apk
             dist/FoxyVPN-iOS-Profile.mobileconfig

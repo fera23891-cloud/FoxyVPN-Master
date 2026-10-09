@@ -146,6 +146,19 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
 </html>
 "#;
 
+const JSON_OK: &str = concat!(
+    "HTTP/1.1 200 OK
+",
+    "Content-Type: application/json
+",
+    "Content-Length: 15
+",
+    "Connection: close
+
+",
+    r#"{"status":"ok"}"#
+);
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================================================");
@@ -188,39 +201,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(windows)]
                     {
                         let _ = std::process::Command::new("reg")
-                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "1", "/f"])
+                            .args(["add", r#"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings"#, "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "1", "/f"])
                             .output();
                         let _ = std::process::Command::new("reg")
-                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyServer", "/t", "REG_SZ", "/d", "127.0.0.1:21080", "/f"])
+                            .args(["add", r#"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings"#, "/v", "ProxyServer", "/t", "REG_SZ", "/d", "127.0.0.1:21080", "/f"])
                             .output();
                     }
-                    let resp = "HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 15
-
-{"status":"ok"}";
-                    let _ = socket.write_all(resp.as_bytes()).await;
+                    let _ = socket.write_all(JSON_OK.as_bytes()).await;
                 } else if req.contains("GET /api/disconnect") {
                     IS_CONNECTED.store(false, Ordering::SeqCst);
                     #[cfg(windows)]
                     {
                         let _ = std::process::Command::new("reg")
-                            .args(["add", r"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings", "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "0", "/f"])
+                            .args(["add", r#"HKCUSoftwareMicrosoftWindowsCurrentVersionInternet Settings"#, "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", "0", "/f"])
                             .output();
                     }
-                    let resp = "HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 15
-
-{"status":"ok"}";
-                    let _ = socket.write_all(resp.as_bytes()).await;
+                    let _ = socket.write_all(JSON_OK.as_bytes()).await;
                 } else {
                     let len = GUI_HTML.len();
-                    let resp = format!("HTTP/1.1 200 OK
+                    let resp = format!(
+                        "HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Content-Length: {}
+Connection: close
 
-{}", len, GUI_HTML);
+{}",
+                        len, GUI_HTML
+                    );
                     let _ = socket.write_all(resp.as_bytes()).await;
                 }
             }
