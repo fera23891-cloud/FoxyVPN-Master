@@ -151,23 +151,23 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
 
     <!-- Navigation Tabs -->
     <nav class="tabs-nav">
-        <button class="tab-btn active" onclick="switchTab('connect')">
+        <button class="tab-btn active" data-tab="connect" onclick="switchTab('connect')">
             <span class="tab-icon">⚡</span>
             <span>اتصال</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('servers')">
+        <button class="tab-btn" data-tab="servers" onclick="switchTab('servers')">
             <span class="tab-icon">🌍</span>
             <span>سرورها</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('accounts')">
+        <button class="tab-btn" data-tab="accounts" onclick="switchTab('accounts')">
             <span class="tab-icon">🔑</span>
             <span>اکانت‌ها</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('settings')">
+        <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">
             <span class="tab-icon">⚙️</span>
             <span>تنظیمات</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('logs')">
+        <button class="tab-btn" data-tab="logs" onclick="switchTab('logs')">
             <span class="tab-icon">📜</span>
             <span>لاگ‌ها</span>
         </button>
@@ -331,6 +331,15 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
                     </label>
                 </div>
             </div>
+
+            <div class="card">
+                <div class="card-title">لیست دامنه‌های دور زدن تحریم و اسپلیت تونل ایران</div>
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <input type="text" id="newDomainInput" placeholder="دامنه جدید، مثلا bank.ir یا *.ir" style="flex:1; background:#020617; border:1px solid var(--border); border-radius:10px; padding:8px 12px; color:white; font-size:12px; outline:none;">
+                    <button onclick="addCustomDomain()" style="padding:8px 14px; background:var(--primary); color:#030712; font-weight:800; font-size:12px; border-radius:10px; border:none; cursor:pointer;">+ افزودن</button>
+                </div>
+                <div id="whitelistContainer" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+            </div>
         </section>
 
         <!-- 5. Logs View -->
@@ -375,23 +384,54 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
         let totalBytes = 0;
         let uptimeInterval = null;
 
-        let accounts = JSON.parse(localStorage.getItem('foxy_accounts') || 'null') || [
+        function safeGetStorage(key, fallback) {
+            try {
+                var v = localStorage.getItem(key);
+                return v ? JSON.parse(v) : fallback;
+            } catch(e) {
+                return fallback;
+            }
+        }
+
+        function safeSetStorage(key, val) {
+            try {
+                localStorage.setItem(key, JSON.stringify(val));
+            } catch(e) {}
+        }
+
+        let accounts = safeGetStorage('foxy_accounts', [
             { id: '1', email: 'primary.fox@mozilla.org', token: 'fx_live_session_tok_99182', usedGb: 14.5, totalGb: 50 },
             { id: '2', email: 'backup.fox@gmail.com', token: 'fx_live_session_tok_44319', usedGb: 7.1, totalGb: 50 }
-        ];
+        ]);
 
         function saveAccounts() {
-            localStorage.setItem('foxy_accounts', JSON.stringify(accounts));
+            safeSetStorage('foxy_accounts', accounts);
             renderAccounts();
         }
 
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
-            if (targetBtn) targetBtn.classList.add('active');
-            const targetPane = document.getElementById('pane-' + tabId);
-            if (targetPane) targetPane.classList.add('active');
+            try {
+                var panes = document.querySelectorAll('.tab-pane');
+                for (var i = 0; i < panes.length; i++) {
+                    panes[i].classList.remove('active');
+                    panes[i].style.display = 'none';
+                }
+                var targetPane = document.getElementById('pane-' + tabId);
+                if (targetPane) {
+                    targetPane.classList.add('active');
+                    targetPane.style.display = 'block';
+                }
+                var btns = document.querySelectorAll('.tab-btn');
+                for (var j = 0; j < btns.length; j++) {
+                    btns[j].classList.remove('active');
+                    var dt = btns[j].getAttribute('data-tab');
+                    if (dt === tabId) {
+                        btns[j].classList.add('active');
+                    }
+                }
+            } catch(err) {
+                console.error('switchTab error:', err);
+            }
         }
 
         function addLog(tag, msg) {
@@ -607,9 +647,9 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
         }
 
         // Custom Whitelist Domains for Split Tunneling
-        let customDomains = JSON.parse(localStorage.getItem('foxy_whitelist') || 'null') || [
+        let customDomains = safeGetStorage('foxy_whitelist', [
             '*.ir', 'shaparak.ir', 'snapp.ir', 'divar.ir', 'aparat.com', 'digikala.com', 'telewebion.com', 'tamin.ir'
-        ];
+        ]);
 
         function renderWhitelist() {
             const container = document.getElementById('whitelistContainer');
@@ -624,11 +664,12 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
 
         function addCustomDomain() {
             const inp = document.getElementById('newDomainInput');
+            if (!inp) return;
             const d = inp.value.trim().toLowerCase();
             if (!d) return;
             if (!customDomains.includes(d)) {
                 customDomains.push(d);
-                localStorage.setItem('foxy_whitelist', JSON.stringify(customDomains));
+                safeSetStorage('foxy_whitelist', customDomains);
                 renderWhitelist();
                 addLog('SPLIT', 'Added domain to bypass whitelist: ' + d);
             }
@@ -637,7 +678,7 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
 
         function removeDomain(i) {
             customDomains.splice(i, 1);
-            localStorage.setItem('foxy_whitelist', JSON.stringify(customDomains));
+            safeSetStorage('foxy_whitelist', customDomains);
             renderWhitelist();
         }
 
@@ -645,7 +686,17 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
         renderServers();
         renderAccounts();
         renderWhitelist();
+        switchTab('connect');
         setTimeout(runLivePingTest, 1200);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var tab = this.getAttribute('data-tab');
+                    if (tab) switchTab(tab);
+                });
+            });
+        });
     </script>
 </body>
 </html>
