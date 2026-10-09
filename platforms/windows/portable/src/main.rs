@@ -27,7 +27,7 @@ const GUI_HTML: &str = r#"<!DOCTYPE html>
         .power-label { font-size: 12px; font-weight: 800; margin-top: 6px; text-transform: uppercase; }
         .status-txt { margin-top: 16px; font-size: 13px; font-weight: 700; text-align: center; color: #94a3b8; }
         .status-txt.active { color: #34d399; }
-        .metrics { display: grid; grid-cols-2; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+        .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
         .metric-box { background: #020617; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; }
         .metric-title { font-size: 11px; color: #64748b; }
         .metric-val { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: #f8fafc; margin-top: 4px; }
@@ -157,7 +157,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("[Info] Local Proxy Listening: 127.0.0.1:{}", proxy_port);
     println!("[Info] GUI Dashboard Running: http://127.0.0.1:{}", gui_port);
 
-    // Auto-launch native app window without URL bar (MS Edge App Mode)
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_millis(600)).await;
         #[cfg(windows)]
@@ -174,7 +173,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Start HTTP Web GUI Server
     let listener = TcpListener::bind(format!("127.0.0.1:{}", gui_port)).await?;
     
     loop {

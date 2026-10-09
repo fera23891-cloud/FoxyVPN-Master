@@ -1,17 +1,17 @@
-# Build Artifacts
+# Build outputs
 target/
-build/
 dist/
+build/
 *.exe
 *.zip
 *.tar.gz
 *.apk
 *.ipa
 
-# System & IDE
+# Temporary & OS
 .idea/
 .vscode/
 *.swp
-*.tmp
+*~
 Thumbs.db
 .DS_Store

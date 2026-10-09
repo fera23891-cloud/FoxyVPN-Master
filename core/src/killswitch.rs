@@ -6,7 +6,6 @@ impl HardwareKillSwitch {
     pub fn arm() -> Self {
         #[cfg(windows)]
         {
-            // Block all non-VPN outbound and kill IPv6 leak
             let _ = std::process::Command::new("powershell")
                 .args(["-NoProfile", "-Command", "Disable-NetAdapterBinding -Name * -ComponentId ms_tcpip6 -ErrorAction SilentlyContinue"])
                 .output();

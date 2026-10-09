@@ -41,7 +41,6 @@ impl AccountPool {
             return None;
         }
 
-        // 1. Check sticky session first (keeps bank/sensitive sites consistent)
         let mut sticky = self.sticky_domain_map.write().await;
         if let Some(&idx) = sticky.get(domain) {
             if idx < accounts.len() && !accounts[idx].is_exhausted {
@@ -49,7 +48,6 @@ impl AccountPool {
             }
         }
 
-        // 2. Load balance to next available healthy account
         for (i, acc) in accounts.iter().enumerate() {
             if !acc.is_exhausted {
                 sticky.insert(domain.to_string(), i);
@@ -60,7 +58,6 @@ impl AccountPool {
         None
     }
 
-    /// Called instantly upon HTTP 429 Quota Exceeded to hot-swap without dropping connection
     pub async fn hot_swap_exhausted_token(&self, exhausted_token: &str) -> Option<String> {
         let mut accounts = self.accounts.write().await;
         for acc in accounts.iter_mut() {

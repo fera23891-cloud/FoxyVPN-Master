@@ -9,4 +9,4 @@ path = "src/main.rs"
 
 [dependencies]
 foxyvpn-core = { path = "../../../core" }
-tokio = { version = "1.38", features = ["full"] }
+tokio = { version = "1.38", features = ["sync", "rt-multi-thread", "macros", "net", "io-util", "time"] }
