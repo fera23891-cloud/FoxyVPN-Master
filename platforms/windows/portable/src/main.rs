@@ -1,6 +1,5 @@
-use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -160,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Auto-launch native app window without URL bar (MS Edge App Mode)
     tokio::spawn(async move {
-        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+        tokio::time::sleep(Duration::from_millis(600)).await;
         #[cfg(windows)]
         {
             let _ = std::process::Command::new("cmd")
